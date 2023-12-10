@@ -36,7 +36,11 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-
+#define SAMPLES_AMOUNT 	500
+#define VOLTAGE_SAMPLES 250
+#define CURRENT_SAMPLES 250
+#define VOLTAGE_COMP	6.432
+#define	CURRENT_COMP	15185.18
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -56,6 +60,22 @@ static void MX_DMA_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM3_Init(void);
 /* USER CODE BEGIN PFP */
+static uint32_t	DMA_samples_buffer [SAMPLES_AMOUNT] = {0};
+static uint32_t voltage_samples [VOLTAGE_SAMPLES] 	= {0};      //PA3
+static uint32_t current_samples [CURRENT_SAMPLES]	= {0};        //PA5
+static double	adequate_voltage_samples [VOLTAGE_SAMPLES] = {0.0};
+static double 	adequate_current_samples [CURRENT_SAMPLES] = {0.0};
+static uint32_t	average_val_voltage = 0;
+static uint32_t	average_val_current = 0;
+static uint32_t	instant_power [VOLTAGE_SAMPLES] = {0.0};
+static uint32_t active_power = 0;
+static double	effective_voltage = 0;
+static double	effective_current = 0;
+static double	apparent_power = 0;
+static double	reactive_power = 0;
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc); //Este es el callback para la rutina de servicio de la interrupción
+														//Dentro de HAL_ADC_IRQHandler
+uint32_t getAverage (uint32_t* samples_buff);
 
 /* USER CODE END PFP */
 
