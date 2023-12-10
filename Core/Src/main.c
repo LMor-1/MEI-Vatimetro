@@ -81,6 +81,28 @@ uint32_t getAverage (uint32_t* samples_buff);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+uint32_t getAverage (uint32_t* samples_buff){
+
+	static uint32_t avg_value = 0;
+
+	for (uint32_t i=0; i<VOLTAGE_SAMPLES; i++){
+		avg_value += samples_buff[i];
+	}
+	return (uint32_t)(avg_value/VOLTAGE_SAMPLES);
+
+}
+double getRMS (double* samples_buff){
+
+	static uint32_t aux_value = 0;
+	static double	rms_value = 0.0;
+
+	for(uint32_t i=0; i<VOLTAGE_SAMPLES; i++){
+		aux_value += samples_buff[i]*samples_buff[i];
+	}
+	rms_value = sqrt(aux_value/VOLTAGE_SAMPLES);
+
+	return rms_value;
+}
 
 /* USER CODE END 0 */
 
