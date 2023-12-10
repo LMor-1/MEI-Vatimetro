@@ -149,6 +149,7 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
     HAL_TIM_Base_Start(&htim3);
+
   }
   /* USER CODE END 3 */
 }
@@ -376,6 +377,62 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
+void deInitVariables (void){
+
+	for(uint8_t i=0; i<VOLTAGE_SAMPLES; i++){
+		voltage_samples[i]=0;
+		current_samples [i]	= 0;
+		adequate_voltage_samples [i] = 0;
+		adequate_current_samples [i] = 0;
+		instant_power [i] = 0;
+	}
+	average_val_voltage = 0;
+	average_val_current = 0;
+	active_power = 0;
+	effective_voltage = 0;
+	effective_current = 0;
+	apparent_power = 0;
+	reactive_power = 0;
+
+
+	return;
+}
+
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc){
+
+	//HAL_ADC_MspDeInit(&hadc1);
+	//Detener el timer3 que dispara al ADC para evitar el DeInit y luego el Init nuevamente
+    HAL_TIM_Base_Stop(&htim3);
+	HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
+	deInitVariables();
+
+	for(uint16_t i=0; i<SAMPLES_AMOUNT; i++){
+		uint16_t k=i/2;
+		((i%2)==0)? (voltage_samples[k]=DMA_samples_buffer[i]): (current_samples[k]=DMA_samples_buffer[i]);
+	}
+	average_val_voltage = getAverage(voltage_samples);
+	average_val_current = getAverage(current_samples);
+
+	for(uint16_t i=0; i<VOLTAGE_SAMPLES; i++){
+		adequate_voltage_samples[i]=(voltage_samples[i]-average_val_voltage)*VOLTAGE_COMP;
+		adequate_current_samples[i]=(current_samples[i]-average_val_current)*CURRENT_COMP;
+		instant_power[i] = adequate_voltage_samples[i]*adequate_current_samples[i];
+	}
+	active_power = getAverage(instant_power);	//V*I*cos(phi)
+
+	effective_voltage = getRMS (adequate_voltage_samples);
+	effective_current = getRMS (adequate_current_samples);
+
+	apparent_power = effective_current*effective_voltage;
+
+	reactive_power = sqrt(apparent_power*apparent_power - active_power*active_power);
+
+
+    HAL_TIM_Base_Start(&htim3);
+
+	//MX_ADC1_Init();
+	return;
+}
 /* USER CODE END 4 */
 
 /**
