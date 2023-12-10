@@ -22,6 +22,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <math.h>
+#include <stdint.h>
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -65,25 +67,29 @@ static uint32_t	DMA_samples_buffer [SAMPLES_AMOUNT] = {0};
 static uint32_t	instant_power [VOLTAGE_SAMPLES] = {0.0};
 
 typedef struct{
-  static uint32_t voltage_samples [VOLTAGE_SAMPLES] = {0};      //PA3
-  static double	adequate_voltage_samples [VOLTAGE_SAMPLES] = {0.0};
-  static uint32_t	average_val_voltage = 0;
-  static double	effective_voltage = 0;
+  uint32_t voltage_samples [VOLTAGE_SAMPLES];      //PA3
+  double	adequate_voltage_samples [VOLTAGE_SAMPLES];
+  uint32_t	average_val_voltage;
+  double	effective_voltage;
 }VoltageParams;
 
 typedef struct{
-  static uint32_t current_samples [CURRENT_SAMPLES]	= {0};        //PA5
-  static double adequate_current_samples [CURRENT_SAMPLES] = {0.0};
-  static uint32_t	average_val_current = 0;
-  static double	effective_current = 0;
+  uint32_t current_samples [CURRENT_SAMPLES];        //PA5
+  double adequate_current_samples [CURRENT_SAMPLES];
+  uint32_t	average_val_current;
+  double	effective_current;
 }CurrentParams;
 
 typedef struct{
-  static uint32_t active_power = 0;
-  static double	apparent_power = 0;
-  static double	reactive_power = 0;
-  static float  power_factor = 0;
+  uint32_t active_power;
+  double	apparent_power;
+  double	reactive_power;
+  float  power_factor;
 }PowerParams;
+
+VoltageParams voltage_params = {0};
+CurrentParams current_params = {0};
+PowerParams power_data_acquired = {0};
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc); //Este es el callback para la rutina de servicio de la interrupción
 														                            //Dentro de HAL_ADC_IRQHandler
@@ -393,20 +399,20 @@ static void MX_GPIO_Init(void)
 void deInitVariables (void){
 
 	for(uint8_t i=0; i<VOLTAGE_SAMPLES; i++){
-		VoltageParams.voltage_samples[i]=0;
-		CurrentParams.current_samples [i]	= 0;
-		VoltageParams.adequate_voltage_samples [i] = 0;
-		CurrentParams.adequate_current_samples [i] = 0;
+		voltage_params.voltage_samples[i]=0;
+		current_params.current_samples [i]	= 0;
+		voltage_params.adequate_voltage_samples [i] = 0;
+		current_params.adequate_current_samples [i] = 0;
 		instant_power [i] = 0;
 	}
-	VoltageParams.average_val_voltage = 0;
-	VoltageParams.effective_voltage = 0;
-  CurrentParams.average_val_current = 0;	
-	CurrentParams.effective_current = 0;
-  power_data_acquired.active_power = 0;
+	voltage_params.average_val_voltage = 0;
+	voltage_params.effective_voltage = 0;
+	current_params.average_val_current = 0;
+	current_params.effective_current = 0;
+	power_data_acquired.active_power = 0;
 	power_data_acquired.apparent_power = 0;
 	power_data_acquired.reactive_power = 0;
-  power_data_acquired.power_factor = 0;
+	power_data_acquired.power_factor = 0;
 
 	return;
 }
@@ -417,27 +423,27 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc){
 	//Detener el timer3 que dispara al ADC para evitar el DeInit y luego el Init nuevamente
   HAL_TIM_Base_Stop(&htim3);
 	//HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
-	deInitVariables();
-  PowerParams power_data_acquired;
+  deInitVariables();
+
 
 	for(uint16_t i=0; i<SAMPLES_AMOUNT; i++){
 		uint16_t k=i/2;
-		((i%2)==0)? (VoltageParams.voltage_samples[k]=DMA_samples_buffer[i]) : (CurrentParams.current_samples[k]=DMA_samples_buffer[i]);
+		((i%2)==0)? (voltage_params.voltage_samples[k]=DMA_samples_buffer[i]) : (current_params.current_samples[k]=DMA_samples_buffer[i]);
 	}
-	VoltageParams.average_val_voltage = getAverage(voltage_samples);
-	CurrentParams.average_val_current = getAverage(current_samples);
+	voltage_params.average_val_voltage = getAverage(voltage_params.voltage_samples);
+	current_params.average_val_current = getAverage(current_params.current_samples);
 
 	for(uint16_t i=0; i<VOLTAGE_SAMPLES; i++){
-		adequate_voltage_samples[i]=(voltage_samples[i]-average_val_voltage)*VOLTAGE_COMP;
-		adequate_current_samples[i]=(current_samples[i]-average_val_current)*CURRENT_COMP;
-		instant_power[i] = adequate_voltage_samples[i]*adequate_current_samples[i];
+		voltage_params.adequate_voltage_samples[i]=(voltage_params.voltage_samples[i]-voltage_params.average_val_voltage)*VOLTAGE_COMP;
+		current_params.adequate_current_samples[i]=(current_params.current_samples[i]-current_params.average_val_current)*CURRENT_COMP;
+		instant_power[i] = voltage_params.adequate_voltage_samples[i]*current_params.adequate_current_samples[i];
 	}
 	power_data_acquired.active_power = getAverage(instant_power);	//V*I*cos(phi)
 
-	VoltageParams.effective_voltage = getRMS (VoltageParams.adequate_voltage_samples);
-	CurrentParams.effective_current = getRMS (CurrentParams.adequate_current_samples);
+	voltage_params.effective_voltage = getRMS (voltage_params.adequate_voltage_samples);
+	current_params.effective_current = getRMS (current_params.adequate_current_samples);
 
-	power_data_acquired.apparent_power = CurrentParams.effective_current*VoltageParams.effective_voltage;
+	power_data_acquired.apparent_power = current_params.effective_current*voltage_params.effective_voltage;
 
 	power_data_acquired.reactive_power = sqrt(power_data_acquired.apparent_power*power_data_acquired.apparent_power - power_data_acquired.active_power*power_data_acquired.active_power);
 
