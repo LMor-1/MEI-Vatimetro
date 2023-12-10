@@ -67,24 +67,24 @@ static uint32_t	DMA_samples_buffer [SAMPLES_AMOUNT] = {0};
 static uint32_t	instant_power [VOLTAGE_SAMPLES] = {0.0};
 
 typedef struct{
-  uint32_t voltage_samples [VOLTAGE_SAMPLES];      //PA3
-  double	adequate_voltage_samples [VOLTAGE_SAMPLES];
-  uint32_t	average_val_voltage;
-  double	effective_voltage;
+  static uint32_t voltage_samples [VOLTAGE_SAMPLES];      //PA3
+  static double	adequate_voltage_samples [VOLTAGE_SAMPLES];
+  static uint32_t	average_val_voltage;
+  static double	effective_voltage;
 }VoltageParams;
 
 typedef struct{
-  uint32_t current_samples [CURRENT_SAMPLES];        //PA5
-  double adequate_current_samples [CURRENT_SAMPLES];
-  uint32_t	average_val_current;
-  double	effective_current;
+  static uint32_t current_samples [CURRENT_SAMPLES];        //PA5
+  static double adequate_current_samples [CURRENT_SAMPLES];
+  static uint32_t	average_val_current;
+  static double	effective_current;
 }CurrentParams;
 
 typedef struct{
-  uint32_t active_power;
-  double	apparent_power;
-  double	reactive_power;
-  float  power_factor;
+  static uint32_t active_power;
+  static double	apparent_power;
+  static double	reactive_power;
+  static float  power_factor;
 }PowerParams;
 
 VoltageParams voltage_params = {0};
@@ -148,7 +148,7 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-
+  SystemInit();
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
@@ -157,7 +157,8 @@ int main(void)
   MX_ADC1_Init();
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
-
+  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)DMA_samples_buffer, SAMPLES_AMOUNT);
+  HAL_TIM_Base_Start_IT(&htim3);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -167,8 +168,9 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    HAL_TIM_Base_Start(&htim3);
-
+   
+    
+    
   }
   /* USER CODE END 3 */
 }
