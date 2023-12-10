@@ -129,7 +129,7 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-  SystemInit();
+  SystemInit(); 
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
@@ -148,6 +148,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    HAL_TIM_Base_Start(&htim3);
   }
   /* USER CODE END 3 */
 }
