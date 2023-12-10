@@ -1,3 +1,4 @@
 Debug/
 *.launch
 .settings/
+*.prefs
