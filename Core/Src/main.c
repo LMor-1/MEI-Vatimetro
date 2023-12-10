@@ -66,6 +66,14 @@ static uint32_t	DMA_samples_buffer [SAMPLES_AMOUNT] = {0};
 
 static uint32_t	instant_power [VOLTAGE_SAMPLES] = {0.0};
 
+typedef enum{
+	SPLIT_SAMPLES,
+    ADECUATE_SAMPLES,
+    CALCULATE,
+    MOVING_AVERAGE,
+    WAIT
+}filterState;
+
 typedef struct{
   static uint32_t voltage_samples [VOLTAGE_SAMPLES];      //PA3
   static double	adequate_voltage_samples [VOLTAGE_SAMPLES];
@@ -90,6 +98,8 @@ typedef struct{
 VoltageParams voltage_params = {0};
 CurrentParams current_params = {0};
 PowerParams power_data_acquired = {0};
+
+volatile bool conversion_complete = false;
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc); //Este es el callback para la rutina de servicio de la interrupción
 														                            //Dentro de HAL_ADC_IRQHandler
@@ -159,6 +169,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
   HAL_ADC_Start_DMA(&hadc1, (uint32_t*)DMA_samples_buffer, SAMPLES_AMOUNT);
   HAL_TIM_Base_Start_IT(&htim3);
+  filterState = SPLIT_SAMPLES;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -168,7 +179,36 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-   
+   switch (filterState)
+   {
+   	case SPLIT_SAMPLES:
+		
+		filterState = ADECUATE_SAMPLES;
+		break;
+   	
+	case ADECUATE_SAMPLES:
+		
+		filterState = CALCULATE;
+		break;	
+   	
+	case CALCULATE:
+		
+		filterState = MOVING_AVERAGE;
+		break;
+   	
+	case MOVING_AVERAGE:
+		
+		filterState = WAIT;
+		break;
+
+   	case WAIT:
+		
+		filterState = SPLIT_SAMPLES;
+		break;		
+
+   	default:
+		break;
+   }
     
     
   }
@@ -401,7 +441,7 @@ static void MX_GPIO_Init(void)
 void deInitVariables (void){
 
 	for(uint8_t i=0; i<VOLTAGE_SAMPLES; i++){
-		voltage_params.voltage_samples[i]=0;
+		voltage_params.voltage_samples[i] =0;
 		current_params.current_samples [i]	= 0;
 		voltage_params.adequate_voltage_samples [i] = 0;
 		current_params.adequate_current_samples [i] = 0;
@@ -423,9 +463,10 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc){
 
 	//HAL_ADC_MspDeInit(&hadc1);
 	//Detener el timer3 que dispara al ADC para evitar el DeInit y luego el Init nuevamente
-  HAL_TIM_Base_Stop(&htim3);
-	//HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
-  deInitVariables();
+	HAL_TIM_Base_Stop(&htim3);  
+	deInitVariables();
+	conversion_complete = true;
+
 
 
 	for(uint16_t i=0; i<SAMPLES_AMOUNT; i++){
@@ -449,8 +490,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc){
 
 	power_data_acquired.reactive_power = sqrt(power_data_acquired.apparent_power*power_data_acquired.apparent_power - power_data_acquired.active_power*power_data_acquired.active_power);
 
-
-  HAL_TIM_Base_Start(&htim3);
+	HAL_TIM_Base_Start(&htim3);
 
 	//MX_ADC1_Init();
 	return;
