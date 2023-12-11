@@ -72,7 +72,7 @@ typedef enum{
     ADECUATE_SAMPLES,
     CALCULATE,
     MOVING_AVERAGE
-}filterState;
+}StateMachineISR;
 
 typedef struct{
   uint32_t voltage_samples [VOLTAGE_SAMPLES];      //PA3
@@ -99,6 +99,7 @@ VoltageParams voltage_params = {0};
 CurrentParams current_params = {0};
 PowerParams power_data_acquired = {0};
 
+static StateMachineISR ISR_state = SPLIT_SAMPLES;
 volatile bool conversion_is_complete = false;
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc); //Este es el callback para la rutina de servicio de la interrupción
@@ -169,7 +170,6 @@ int main(void)
   /* USER CODE BEGIN 2 */
   HAL_ADC_Start_DMA(&hadc1, (uint32_t*)DMA_samples_buffer, SAMPLES_AMOUNT);
   HAL_TIM_Base_Start_IT(&htim3);
-  filterState = SPLIT_SAMPLES;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -180,7 +180,7 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	if(conversion_is_complete){
-		switch (filterState){
+		switch(ISR_state){
 
 			case SPLIT_SAMPLES:
 				for(uint16_t i=0; i<SAMPLES_AMOUNT; i++){
@@ -188,7 +188,7 @@ int main(void)
 					((i%2)==0)? (voltage_params.voltage_samples[k]=DMA_samples_buffer[i]) : (current_params.current_samples[k]=DMA_samples_buffer[i]);
 				}
 	
-				filterState = ADECUATE_SAMPLES;
+				ISR_state = ADECUATE_SAMPLES;
 				break;
 	
 			case ADECUATE_SAMPLES:
@@ -197,7 +197,7 @@ int main(void)
 					current_params.adequate_current_samples[i]=(current_params.current_samples[i]-current_params.average_val_current)*CURRENT_COMP;
 				}
 	
-				filterState = CALCULATE;
+				ISR_state = CALCULATE;
 				break;	
 	
 			case CALCULATE:
@@ -222,12 +222,12 @@ int main(void)
 				
 				power_data_acquired.power_factor = acosf(power_data_acquired.active_power/power_data_acquired.apparent_power);
 
-				filterState = MOVING_AVERAGE;
+				ISR_state = MOVING_AVERAGE;
 				break;
 	
 			case MOVING_AVERAGE:
 			
-				filterState = SPLIT_SAMPLES;
+				ISR_state = SPLIT_SAMPLES;
 				conversion_is_complete = false;
 				HAL_TIM_Base_Start(&htim3);
 				break;
