@@ -24,6 +24,7 @@
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdbool.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -74,24 +75,24 @@ typedef enum{
 }filterState;
 
 typedef struct{
-  static uint32_t voltage_samples [VOLTAGE_SAMPLES];      //PA3
-  static double	adequate_voltage_samples [VOLTAGE_SAMPLES];
-  static uint32_t	average_val_voltage;
-  static double	effective_voltage;
+  uint32_t voltage_samples [VOLTAGE_SAMPLES];      //PA3
+  double	adequate_voltage_samples [VOLTAGE_SAMPLES];
+  uint32_t	average_val_voltage;
+  double	effective_voltage;
 }VoltageParams;
 
 typedef struct{
-  static uint32_t current_samples [CURRENT_SAMPLES];        //PA5
-  static double adequate_current_samples [CURRENT_SAMPLES];
-  static uint32_t	average_val_current;
-  static double	effective_current;
+  uint32_t current_samples [CURRENT_SAMPLES];        //PA5
+  double adequate_current_samples [CURRENT_SAMPLES];
+  uint32_t	average_val_current;
+  double	effective_current;
 }CurrentParams;
 
 typedef struct{
-  static uint32_t active_power;
-  static double	apparent_power;
-  static double	reactive_power;
-  static float  power_factor;
+  uint32_t active_power;
+  double	apparent_power;
+  double	reactive_power;
+  float  power_factor;
 }PowerParams;
 
 VoltageParams voltage_params = {0};
