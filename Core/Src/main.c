@@ -124,7 +124,7 @@ uint16_t getAverage (uint16_t* samples_buff){
 		//	continue;
 		//}
 	}
-	return (uint16_t)(avg_value/VOLTAGE_SAMPLES);
+	return (uint16_t)(sum/VOLTAGE_SAMPLES);
 	
 }
 uint32_t getAverage_32b (uint32_t* samples_buff){
@@ -134,7 +134,7 @@ uint32_t getAverage_32b (uint32_t* samples_buff){
 	for (uint32_t i=0; i<VOLTAGE_SAMPLES; i++){
 		sum += samples_buff[i];
 	}
-	return (uint32_t)(avg_value/VOLTAGE_SAMPLES);
+	return (uint32_t)(sum/VOLTAGE_SAMPLES);
 
 }
 double getRMS (double* samples_buff){
