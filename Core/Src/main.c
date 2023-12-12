@@ -515,12 +515,6 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc){
 	for(uint16_t i=0; i<SAMPLES_AMOUNT; i++){
 		uint16_t k=(i/2);
 		((i%2)==0)? (voltage_params.voltage_samples[k]=DMA_samples_buffer[i]) : (current_params.current_samples[k]=DMA_samples_buffer[i]);
-		//if(i==246){
-			//__BKPT(0xAB);
-			//uint16_t l=0;
-			//wait
-			//continue;
-		//}
 	}
 	voltage_params.average_val_voltage = getAverage(voltage_params.voltage_samples);
 	current_params.average_val_current = getAverage(current_params.current_samples);
