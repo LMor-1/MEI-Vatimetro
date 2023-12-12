@@ -42,8 +42,9 @@
 #define SAMPLES_AMOUNT 	500
 #define VOLTAGE_SAMPLES 250
 #define CURRENT_SAMPLES 250
-#define VOLTAGE_COMP	6.432
+#define VOLTAGE_COMP	103.66  //311Vp se traducen en 3Vp
 #define	CURRENT_COMP	15185.18
+#define VREF_ADC      	3
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -63,7 +64,7 @@ static void MX_DMA_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM3_Init(void);
 /* USER CODE BEGIN PFP */
-static uint32_t	DMA_samples_buffer [SAMPLES_AMOUNT] = {0};
+static uint16_t	DMA_samples_buffer [SAMPLES_AMOUNT] = {0};
 
 static uint32_t	instant_power [VOLTAGE_SAMPLES] = {0.0};
 
@@ -75,24 +76,24 @@ typedef enum{
 }StateMachineISR;
 
 typedef struct{
-  uint32_t voltage_samples [VOLTAGE_SAMPLES];      //PA3
-  double	adequate_voltage_samples [VOLTAGE_SAMPLES];
-  uint32_t	average_val_voltage;
-  double	effective_voltage;
+  uint16_t  voltage_samples [VOLTAGE_SAMPLES];      //PA3
+  double	  adequate_voltage_samples [VOLTAGE_SAMPLES];
+  uint16_t	average_val_voltage;
+  double  	effective_voltage;
 }VoltageParams;
 
 typedef struct{
-  uint32_t current_samples [CURRENT_SAMPLES];        //PA5
-  double adequate_current_samples [CURRENT_SAMPLES];
-  uint32_t	average_val_current;
-  double	effective_current;
+  uint16_t  current_samples [CURRENT_SAMPLES];        //PA5
+  double    adequate_current_samples [CURRENT_SAMPLES];
+  uint16_t	average_val_current;
+  double	  effective_current;
 }CurrentParams;
 
 typedef struct{
   uint32_t active_power;
   double	apparent_power;
   double	reactive_power;
-  float  power_factor;
+  double  power_factor;
 }PowerParams;
 
 VoltageParams voltage_params = {0};
@@ -105,13 +106,28 @@ volatile bool conversion_is_complete = false;
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc); //Este es el callback para la rutina de servicio de la interrupción
 														                            //Dentro de HAL_ADC_IRQHandler
 
-uint32_t getAverage (uint32_t* samples_buff);
+uint16_t getAverage (uint16_t* samples_buff);
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-uint32_t getAverage (uint32_t* samples_buff){
+uint16_t getAverage (uint16_t* samples_buff){
+
+	static uint16_t avg_value = 0;
+
+	for (uint16_t i=0; i<VOLTAGE_SAMPLES; i++){
+		avg_value += samples_buff[i];
+		if(i==246){
+			uint16_t waiting=0;
+			//wait
+			continue;
+		}
+	}
+	return (uint16_t)(avg_value/VOLTAGE_SAMPLES);
+
+}
+uint32_t getAverage_32b (uint32_t* samples_buff){
 
 	static uint32_t avg_value = 0;
 
@@ -179,6 +195,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	 /*
 	if(conversion_is_complete){
 		switch(ISR_state){
 
@@ -210,9 +227,9 @@ int main(void)
 				current_params.average_val_current = getAverage(current_params.current_samples);
 	
 				for(uint16_t i=0; i<VOLTAGE_SAMPLES; i++)
-					instant_power[i] = voltage_params.adequate_voltage_samples[i]*current_params.adequate_current_samples[i];
+					instant_power[i] = (uint32_t)(voltage_params.adequate_voltage_samples[i]*current_params.adequate_current_samples[i]);
 	
-				power_data_acquired.active_power = getAverage(instant_power);	//V*I*cos(phi)
+				power_data_acquired.active_power = getAverage_32b(instant_power);	//V*I*cos(phi)
 	
 				voltage_params.effective_voltage = getRMS (voltage_params.adequate_voltage_samples);
 				current_params.effective_current = getRMS (current_params.adequate_current_samples);
@@ -237,7 +254,7 @@ int main(void)
    		}
 
 	}
-	
+	*/
     
     
   }
@@ -373,7 +390,7 @@ static void MX_TIM3_Init(void)
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim3.Init.Period = 3360;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
   {
     Error_Handler();
@@ -496,29 +513,35 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc){
 	deInitVariables();
 	conversion_is_complete = true;
 
-	//for(uint16_t i=0; i<SAMPLES_AMOUNT; i++){
-	//	uint16_t k=i/2;
-	//	((i%2)==0)? (voltage_params.voltage_samples[k]=DMA_samples_buffer[i]) : (current_params.current_samples[k]=DMA_samples_buffer[i]);
-	//}
-	//voltage_params.average_val_voltage = getAverage(voltage_params.voltage_samples);
-	//current_params.average_val_current = getAverage(current_params.current_samples);
-	//
-	//for(uint16_t i=0; i<VOLTAGE_SAMPLES; i++){
-	//	voltage_params.adequate_voltage_samples[i]=(voltage_params.voltage_samples[i]-voltage_params.average_val_voltage)*VOLTAGE_COMP;
-	//	current_params.adequate_current_samples[i]=(current_params.current_samples[i]-current_params.average_val_current)*CURRENT_COMP;
-	//	instant_power[i] = voltage_params.adequate_voltage_samples[i]*current_params.adequate_current_samples[i];
-	//}
-	//
-	//power_data_acquired.active_power = getAverage(instant_power);	//V*I*cos(phi)
-	//
-	//voltage_params.effective_voltage = getRMS (voltage_params.adequate_voltage_samples);
-	//current_params.effective_current = getRMS (current_params.adequate_current_samples);
-	//
-	//power_data_acquired.apparent_power = current_params.effective_current*voltage_params.effective_voltage;
-	//
-	//power_data_acquired.reactive_power = sqrt(power_data_acquired.apparent_power*power_data_acquired.apparent_power - power_data_acquired.active_power*power_data_acquired.active_power);
+	for(uint16_t i=0; i<SAMPLES_AMOUNT; i++){
+		uint16_t k=(i/2);
+		((i%2)==0)? (voltage_params.voltage_samples[k]=DMA_samples_buffer[i]) : (current_params.current_samples[k]=DMA_samples_buffer[i]);
+		//if(i==246){
+			//__BKPT(0xAB);
+			//uint16_t l=0;
+			//wait
+			//continue;
+		//}
+	}
+	voltage_params.average_val_voltage = getAverage(voltage_params.voltage_samples);
+	current_params.average_val_current = getAverage(current_params.current_samples);
+	
+	for(uint16_t i=0; i<VOLTAGE_SAMPLES; i++){
+		voltage_params.adequate_voltage_samples[i]=((voltage_params.voltage_samples[i]-voltage_params.average_val_voltage)/voltage_params.average_val_voltage)*VOLTAGE_COMP*VREF_ADC;
+		current_params.adequate_current_samples[i]=(current_params.current_samples[i]-current_params.average_val_current)*CURRENT_COMP;
+		instant_power[i] =(uint32_t)(voltage_params.adequate_voltage_samples[i]*current_params.adequate_current_samples[i]);
+	}
+	
+	power_data_acquired.active_power = getAverage_32b(instant_power);	//V*I*cos(phi)
+	
+	voltage_params.effective_voltage = getRMS (voltage_params.adequate_voltage_samples);
+	current_params.effective_current = getRMS (current_params.adequate_current_samples);
+	
+	power_data_acquired.apparent_power = current_params.effective_current*voltage_params.effective_voltage;
+	
+	power_data_acquired.reactive_power = sqrt(power_data_acquired.apparent_power*power_data_acquired.apparent_power - power_data_acquired.active_power*power_data_acquired.active_power);
 
-	//HAL_TIM_Base_Start(&htim3);
+	HAL_TIM_Base_Start(&htim3);
 
 	//MX_ADC1_Init();
 	return;
