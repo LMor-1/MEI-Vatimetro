@@ -114,25 +114,25 @@ uint16_t getAverage (uint16_t* samples_buff);
 /* USER CODE BEGIN 0 */
 uint16_t getAverage (uint16_t* samples_buff){
 
-	static uint32_t avg_value = 0;
+	volatile uint32_t sum = 0;
 
 	for (uint16_t i=0; i<VOLTAGE_SAMPLES; i++){
-		avg_value += samples_buff[i];
-		if(i==246){
-			uint16_t waiting=0;
-			//wait
-			continue;
-		}
+		sum += samples_buff[i];
+		//if(i==246){
+		//	uint16_t waiting=0;
+		//	//wait
+		//	continue;
+		//}
 	}
 	return (uint16_t)(avg_value/VOLTAGE_SAMPLES);
-
+	
 }
 uint32_t getAverage_32b (uint32_t* samples_buff){
 
-	static uint32_t avg_value = 0;
+	volatile uint32_t sum = 0;
 
 	for (uint32_t i=0; i<VOLTAGE_SAMPLES; i++){
-		avg_value += samples_buff[i];
+		sum += samples_buff[i];
 	}
 	return (uint32_t)(avg_value/VOLTAGE_SAMPLES);
 
