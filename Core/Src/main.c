@@ -45,6 +45,7 @@
 #define VOLTAGE_COMP	103.66  //311Vp se traducen en 3Vp
 #define	CURRENT_COMP	15185.18
 #define VREF_ADC      	3
+#define N_AVERAGE       10
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -100,6 +101,16 @@ VoltageParams voltage_params = {0};
 CurrentParams current_params = {0};
 PowerParams power_data_acquired = {0};
 
+double arrVoltage_moving [N_AVERAGE] = {0.0};
+double arrCurrent_moving [N_AVERAGE] = {0.0};
+PowerParams arrPower_moving [N_AVERAGE] = {0.0};
+double voltage_value;
+double current_value;
+double active_value;
+double apparent_value;
+double reactive_value;
+double factor_value;
+
 static StateMachineISR ISR_state = SPLIT_SAMPLES;
 volatile bool conversion_is_complete = false;
 
@@ -137,6 +148,7 @@ uint32_t getAverage_32b (uint32_t* samples_buff){
 	return (uint32_t)(sum/VOLTAGE_SAMPLES);
 
 }
+
 double getRMS (double* samples_buff){
 
 	static uint32_t aux_value = 0;
@@ -149,7 +161,35 @@ double getRMS (double* samples_buff){
 
 	return rms_value;
 }
+                        //indice del arreglo; muestra que se agrega; ubicacion donde se agrega
+double getMovingAverage (uint8_t* n, double* sample_buff, double* arr_average){
+  
+  volatile double tmp_value;
 
+  arr_average[n] = sample_buff;
+
+  for(uint8_t x=0; x<N_AVERAGE; x++) 
+  {
+    tmp_value += arr_average[x];
+  }  
+
+  return (tmp_value/N_AVERAGE);
+}
+
+double getMovingAverage_s (uint8_t* n, PowerParams sample_buff, PowerParams* arr_average){
+
+  volatile double tmp_value;
+
+  arr_average[n].active_power = sample_buff;
+  arr_average[n].apparent_power = sample_buff.apparent_power;
+  arr_average[n].reactive_power = sample_buff;
+  for(uint8_t x=0; x<N_AVERAGE; x++) 
+  {
+    tmp_value += arr_average[x];
+  }  
+
+  return (tmp_value/N_AVERAGE);
+}
 /* USER CODE END 0 */
 
 /**
@@ -243,12 +283,22 @@ int main(void)
 				break;
 	
 			case MOVING_AVERAGE:
-			
+*/
+        static uint8_t n_values = 0;
+        
+        voltage_value = getMovingAverage(&i, voltage_params.effective_voltage, arrVoltage_moving);
+        current_value = getMovingAverage(&i, current_params.effective_current, arrCurrent_moving);
+        active_value = getMovingAverage_s(&i, power_data_acquired, arrPower_moving);
+        (i<9)? (++i) : (i=0);
+/*
+        
 				ISR_state = SPLIT_SAMPLES;
 				conversion_is_complete = false;
 				HAL_TIM_Base_Start(&htim3);
 				break;
-		
+
+
+
 	   		default:
 				break;
    		}
