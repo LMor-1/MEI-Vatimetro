@@ -114,7 +114,7 @@ uint16_t getAverage (uint16_t* samples_buff);
 /* USER CODE BEGIN 0 */
 uint16_t getAverage (uint16_t* samples_buff){
 
-	static uint16_t avg_value = 0;
+	static uint32_t avg_value = 0;
 
 	for (uint16_t i=0; i<VOLTAGE_SAMPLES; i++){
 		avg_value += samples_buff[i];
