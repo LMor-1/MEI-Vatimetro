@@ -42,7 +42,7 @@
 #define SAMPLES_AMOUNT 	500
 #define VOLTAGE_SAMPLES 250
 #define CURRENT_SAMPLES 250
-#define VOLTAGE_COMP	155.55  //311Vp se traducen en 3Vp
+#define VOLTAGE_COMP	311.11  //311Vp se traducen en 3Vp
 #define	CURRENT_COMP	1
 #define VREF_ADC      	3
 /* USER CODE END PM */
@@ -66,7 +66,7 @@ static void MX_TIM3_Init(void);
 /* USER CODE BEGIN PFP */
 static uint16_t	DMA_samples_buffer [SAMPLES_AMOUNT] = {0};
 
-static uint32_t	instant_power [VOLTAGE_SAMPLES] = {0.0};
+static double	instant_power [VOLTAGE_SAMPLES] = {0.0};
 
 typedef enum{
 	SPLIT_SAMPLES,
@@ -126,14 +126,14 @@ uint16_t getAverage (uint16_t* samples_buff){
 	}
 	return (uint16_t)(sum/VOLTAGE_SAMPLES);
 }
-uint32_t getAverage_32b (uint32_t* samples_buff){
+double getAverage_double (double* samples_buff){
 
 	volatile uint32_t sum = 0;
 
 	for (uint32_t i=0; i<VOLTAGE_SAMPLES; i++){
 		sum += samples_buff[i];
 	}
-	return (uint32_t)(sum/VOLTAGE_SAMPLES);
+	return (double)(sum/VOLTAGE_SAMPLES);
 
 }
 double getRMS (double* samples_buff){
@@ -528,12 +528,12 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc){
     	volatile uint16_t s =current_params.average_val_current;
     	volatile double	  x = (double) (e-s);
 
-		voltage_params.adequate_voltage_samples[i]=((n)/(a))*VOLTAGE_COMP;
+		voltage_params.adequate_voltage_samples[i]=((n)/(a))*VOLTAGE_COMP;//208.62
 		current_params.adequate_current_samples[i]=((x)/(s))*CURRENT_COMP;
-		instant_power[i] =(uint32_t)(voltage_params.adequate_voltage_samples[i]*current_params.adequate_current_samples[i]);
+		instant_power[i] = (voltage_params.adequate_voltage_samples[i]*current_params.adequate_current_samples[i]);
 	}
 	
-	power_data_acquired.active_power = getAverage_32b(instant_power);	//V*I*cos(phi)
+	power_data_acquired.active_power = getAverage_double(instant_power);	//V*I*cos(phi)
 	
 	voltage_params.effective_voltage = getRMS (voltage_params.adequate_voltage_samples);
 	current_params.effective_current = getRMS (current_params.adequate_current_samples);
