@@ -71,6 +71,18 @@ static uint16_t	DMA_samples_buffer [SAMPLES_AMOUNT] = {0};
 
 static double	instant_power [VOLTAGE_SAMPLES] = {0.0};
 
+#ifdef __GNUC__
+#define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
+#else
+#define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
+#endif
+
+PUTCHAR_PROTOTYPE{
+  HAL_UART_Transmit(&huart3,(uint8_t *)&ch, 1, 0xFFFF);
+
+  return ch;
+}
+
 typedef enum{
 	SPLIT_SAMPLES,
     ADECUATE_SAMPLES,
