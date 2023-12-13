@@ -176,19 +176,20 @@ double getMovingAverage (uint8_t* n, double* sample_buff, double* arr_average){
   return (tmp_value/N_AVERAGE);
 }
 
-double getMovingAverage_s (uint8_t* n, PowerParams sample_buff, PowerParams* arr_average){
+void getMovingAverage_s (uint8_t* n){
 
-  volatile double tmp_value;
+  arrPower_moving[n].active_power = power_data_acquired.active_power;
+  arrPower_moving[n].apparent_power = power_data_acquired.apparent_power;
+  arrPower_moving[n].reactive_power = power_data_acquired.reactive_power;
+  arrPower_moving[n].power_factor = power_data_acquired.power_factor;
 
-  arr_average[n].active_power = sample_buff;
-  arr_average[n].apparent_power = sample_buff.apparent_power;
-  arr_average[n].reactive_power = sample_buff;
   for(uint8_t x=0; x<N_AVERAGE; x++) 
   {
-    tmp_value += arr_average[x];
+    active_value += arrPower_moving[x].active_power;
+    apparent_value += arrPower_moving[x].apparent_power;
+    reactive_value += arrPower_moving[x].reactive_power;
+    factor_value += arrPower_moving[x].power_factor;
   }  
-
-  return (tmp_value/N_AVERAGE);
 }
 /* USER CODE END 0 */
 
@@ -288,9 +289,9 @@ int main(void)
         
         voltage_value = getMovingAverage(&i, voltage_params.effective_voltage, arrVoltage_moving);
         current_value = getMovingAverage(&i, current_params.effective_current, arrCurrent_moving);
-        active_value = getMovingAverage_s(&i, power_data_acquired, arrPower_moving);
+        getMovingAverage_s(&i);
         (i<9)? (++i) : (i=0);
-/*
+/*      
         
 				ISR_state = SPLIT_SAMPLES;
 				conversion_is_complete = false;
