@@ -45,6 +45,7 @@
 #define VOLTAGE_COMP	311.11  //311Vp se traducen en 3Vp
 #define	CURRENT_COMP	1
 #define VREF_ADC      	3
+#define MAKE_TO_MILI	1000
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -70,6 +71,9 @@ static void MX_USART3_UART_Init(void);
 static uint16_t	DMA_samples_buffer [SAMPLES_AMOUNT] = {0};
 
 static double	instant_power [VOLTAGE_SAMPLES] = {0.0};
+
+void runStateMachine (bool isReady);
+
 /*
 //#ifdef __GNUC__
 //#define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
@@ -88,10 +92,10 @@ int _write(int file, char *ptr, int len) {
 }
 */
 typedef enum{
-	SPLIT_SAMPLES,
-    ADECUATE_SAMPLES,
-    CALCULATE,
-    MOVING_AVERAGE
+  SPLIT_SAMPLES,
+  ADECUATE_SAMPLES,
+  CALCULATE,
+  MOVING_AVERAGE
 }StateMachineISR;
 
 typedef struct{
@@ -120,7 +124,7 @@ CurrentParams current_params = {0};
 PowerParams power_data_acquired = {0};
 
 static StateMachineISR ISR_state = SPLIT_SAMPLES;
-volatile bool conversion_is_complete = false;
+//volatile bool conversion_is_complete = false;
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc); //Este es el callback para la rutina de servicio de la interrupción
 														                            //Dentro de HAL_ADC_IRQHandler
@@ -556,49 +560,88 @@ void deInitVariables (void){
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc){
 
 	HAL_TIM_Base_Stop(&htim3);  
-	deInitVariables();
-	volatile double square_ap = 0;
-    volatile double square_ac = 0;
-	conversion_is_complete = true;
+  runStateMachine(true); 
 
-	for(uint16_t i=0; i<SAMPLES_AMOUNT; i++){
-		uint16_t k=(i/2);
-		((i%2)==0)? (voltage_params.voltage_samples[k]=DMA_samples_buffer[i]) : (current_params.current_samples[k]=DMA_samples_buffer[i]);
-	}
-	voltage_params.average_val_voltage = getAverage(voltage_params.voltage_samples);
-	current_params.average_val_current = getAverage(current_params.current_samples);
-	
-	for(uint16_t i=0; i<VOLTAGE_SAMPLES; i++){
-		  volatile uint16_t v =voltage_params.voltage_samples[i];
-    	volatile uint16_t a =voltage_params.average_val_voltage;
-    	volatile double	  n = (double) (v-a);
-
-    	volatile uint16_t e =current_params.current_samples[i];
-    	volatile uint16_t s =current_params.average_val_current;
-    	volatile double	  x = (double) (e-s);
-
-		voltage_params.adequate_voltage_samples[i]=((n)/(a))*408;         //408 = 311Vp/((n)/(a))
-		current_params.adequate_current_samples_mA[i]=((x)/(s))*MAKE_TO_MILI;
-		instant_power[i] =(voltage_params.adequate_voltage_samples[i]*current_params.adequate_current_samples_mA[i]);
-	}
-	
-	power_data_acquired.active_power = (getAverage_double(instant_power))/MAKE_TO_MILI;	//V*I*cos(phi)
-
-	voltage_params.effective_voltage = getRMS (voltage_params.adequate_voltage_samples);
-	current_params.effective_current_mA = (getRMS (current_params.adequate_current_samples_mA));
-	
-	power_data_acquired.apparent_power = (current_params.effective_current_mA*voltage_params.effective_voltage)/MAKE_TO_MILI;
-  
-	square_ap = (double) (pow(power_data_acquired.apparent_power, 2));
-	square_ac = (double) (pow(power_data_acquired.active_power  , 2));
-
-	power_data_acquired.reactive_power = sqrt(square_ap - square_ac);
-
-	HAL_TIM_Base_Start(&htim3);
-
-	//MX_ADC1_Init();
 	return;
 }
+
+void runStateMachine (bool isReady){
+
+  if(isReady){
+    deInitVariables();
+    volatile double square_ap = 0;
+    volatile double square_ac = 0;
+    ISR_state = SPLIT_SAMPLES;
+
+		switch(ISR_state){
+
+			case SPLIT_SAMPLES:
+        for(uint16_t i=0; i<SAMPLES_AMOUNT; i++){
+          uint16_t k=(i/2);
+          ((i%2)==0)? (voltage_params.voltage_samples[k]=DMA_samples_buffer[i]) : (current_params.current_samples[k]=DMA_samples_buffer[i]);
+        }
+	      voltage_params.average_val_voltage = getAverage(voltage_params.voltage_samples);
+	      current_params.average_val_current = getAverage(current_params.current_samples);
+	
+				ISR_state = ADECUATE_SAMPLES;
+				break;
+	
+			case ADECUATE_SAMPLES:
+        for(uint16_t i=0; i<VOLTAGE_SAMPLES; i++){
+	      	volatile uint16_t v =voltage_params.voltage_samples[i];
+          volatile uint16_t a =voltage_params.average_val_voltage;
+          volatile double	  n = (double) (v-a);
+  
+          volatile uint16_t e =current_params.current_samples[i];
+          volatile uint16_t s =current_params.average_val_current;
+          volatile double	  x = (double) (e-s);
+  
+	      	voltage_params.adequate_voltage_samples[i]=((n)/(a))*408;         //408 = 311Vp/((n)/(a))
+	      	current_params.adequate_current_samples_mA[i]=((x)/(s))*MAKE_TO_MILI;
+	      	instant_power[i] =(voltage_params.adequate_voltage_samples[i]*current_params.adequate_current_samples_mA[i]);
+	      }
+	
+				ISR_state = CALCULATE;
+				break;	
+	
+			case CALCULATE:
+				//S: apparent power
+				//Q: reactive power
+				//P: active power
+				//FDP: arc cosine of P/S
+				power_data_acquired.active_power = (getAverage_double(instant_power))/MAKE_TO_MILI;	//V*I*cos(phi)
+
+				voltage_params.effective_voltage = getRMS (voltage_params.adequate_voltage_samples);
+				current_params.effective_current_mA = (getRMS (current_params.adequate_current_samples_mA));
+				
+				power_data_acquired.apparent_power = (current_params.effective_current_mA*voltage_params.effective_voltage)/MAKE_TO_MILI;
+			
+				square_ap = (double) (pow(power_data_acquired.apparent_power, 2));
+				square_ac = (double) (pow(power_data_acquired.active_power  , 2));
+			
+				power_data_acquired.reactive_power = sqrt(square_ap - square_ac);
+
+
+				power_data_acquired.power_factor = (double) (power_data_acquired.active_power/power_data_acquired.apparent_power);
+
+				ISR_state = MOVING_AVERAGE;
+				break;
+	
+			case MOVING_AVERAGE:
+				//TODO
+
+				ISR_state = SPLIT_SAMPLES;
+				//conversion_is_complete = false;
+				HAL_TIM_Base_Start(&htim3);
+				break;
+		
+	   	default:
+				break;
+   		}
+	}
+	return;
+}
+
 /* USER CODE END 4 */
 
 /**
