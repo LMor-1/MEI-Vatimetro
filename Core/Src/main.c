@@ -46,6 +46,7 @@
 #define CURRENT_COMP    1
 #define VREF_ADC        3
 #define MAKE_TO_MILI    1000
+#define N_AVERAGE       10
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -126,6 +127,16 @@ typedef struct
 VoltageParams voltage_params = {0};
 CurrentParams current_params = {0};
 PowerParams power_data_acquired = {0};
+
+double arrVoltage_moving [N_AVERAGE] = {0.0};
+double arrCurrent_moving [N_AVERAGE] = {0.0};
+PowerParams arrPower_moving [N_AVERAGE] = {0};
+double voltage_value;
+double current_value;
+double active_value;
+double apparent_value;
+double reactive_value;
+double factor_value;
 
 static StateMachineISR ISR_state = SPLIT_SAMPLES;
 // volatile bool conversion_is_complete = false;
