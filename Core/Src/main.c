@@ -593,7 +593,6 @@ void runStateMachine(bool isReady)
             current_params.average_val_current = getAverage(current_params.current_samples);
 
             ISR_state = ADECUATE_SAMPLES;
-            break;
 
         case ADECUATE_SAMPLES:
             for (uint16_t i = 0; i < VOLTAGE_SAMPLES; i++)
@@ -612,7 +611,6 @@ void runStateMachine(bool isReady)
             }
 
             ISR_state = CALCULATE;
-            break;
 
         case CALCULATE:
             // S: apparent power
@@ -634,7 +632,6 @@ void runStateMachine(bool isReady)
             power_data_acquired.power_factor = (double)(power_data_acquired.active_power / power_data_acquired.apparent_power);
 
             ISR_state = MOVING_AVERAGE;
-            break;
 
         case MOVING_AVERAGE:
             // TODO
