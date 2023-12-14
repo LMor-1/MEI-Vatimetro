@@ -224,10 +224,10 @@ void getMovingAverage_s(uint8_t n, uint8_t amount_of_samples)
     tmp_rea += arrPower_moving[x].reactive_power;
     tmp_fdp += arrPower_moving[x].power_factor;
   }
-  active_value  += tmp_act/amount_of_samples;//printf
-  apparent_value+= tmp_app/amount_of_samples;//printf
-  reactive_value+= tmp_rea/amount_of_samples;//printf
-  factor_value  += tmp_fdp/amount_of_samples;//printf
+  active_value  = tmp_act/amount_of_samples;//printf
+  apparent_value= tmp_app/amount_of_samples;//printf
+  reactive_value= tmp_rea/amount_of_samples;//printf
+  factor_value  = tmp_fdp/amount_of_samples;//printf
 
   return;
 }
@@ -270,11 +270,11 @@ int main(void)
   HAL_ADC_Start_DMA(&hadc1, (uint32_t *)DMA_samples_buffer, SAMPLES_AMOUNT);
   HAL_TIM_Base_Start_IT(&htim3);
 
-  printf("-----------------------------\r\n");
-  printf("Medidas Electronicas I\r\n");
-  printf("Laboratorio 13\r\n")
-  printf("Alberdi - Morelli - Sepulveda\r\n");
-  printf("-----------------------------\r\n\n");
+  //printf("-----------------------------\r\n");
+  //printf("Medidas Electronicas I\r\n");
+  //printf("Laboratorio 13\r\n");
+  //printf("Alberdi - Morelli - Sepulveda\r\n");
+  //printf("-----------------------------\r\n\n");
 
   /* USER CODE END 2 */
 
@@ -644,7 +644,7 @@ void runStateMachine(bool isReady)
 
       getMovingAverage_s(position_to_insert, n_values);
 
-      (position_to_insert < 10) ? (++position_to_insert) : (position_to_insert = 0);
+      (position_to_insert < 9) ? (++position_to_insert) : (position_to_insert = 0);
       (n_values <N_AVERAGE) ? (++n_values) : (n_values=N_AVERAGE);
 
       ISR_state = SHOW;
@@ -654,12 +654,12 @@ void runStateMachine(bool isReady)
        * TODO: 
        * Redirect through USART3
        * */ 
-      printf("Tension efectiva:\t %f [V]\r\n", voltage_value);
-      printf("Corriente efectiva:\t %f [mA]\r\n",current_value);
-      printf("Potencia activa:\t %f [W]\r\n", active_value);
-      printf("Potencia aparente:\t %f [VA]\r\n", apparent_value);
-      printf("Potencia reactiva:\t %f [VAR]\r\n", reactive_value);
-      printf("Factor de potencia:\t %f []\r\n", factor_value);
+      //printf("Tension efectiva:\t %f [V]\r\n", voltage_value);
+      //printf("Corriente efectiva:\t %f [mA]\r\n",current_value);
+      //printf("Potencia activa:\t %f [W]\r\n", active_value);
+      //printf("Potencia aparente:\t %f [VA]\r\n", apparent_value);
+      //printf("Potencia reactiva:\t %f [VAR]\r\n", reactive_value);
+      //printf("Factor de potencia:\t %f []\r\n", factor_value);
 
       ISR_state = SPLIT_SAMPLES;
       HAL_TIM_Base_Start(&htim3);
