@@ -664,12 +664,17 @@ void runStateMachine(bool isReady)
             ISR_state = MOVING_AVERAGE;
 
         case MOVING_AVERAGE:
-            // TODO
+          static uint8_t n_values = 0;
 
-            ISR_state = SPLIT_SAMPLES;
-            // conversion_is_complete = false;
-            HAL_TIM_Base_Start(&htim3);
-            break;
+          voltage_value = getMovingAverage(&i, voltage_params.effective_voltage, arrVoltage_moving);
+          current_value = getMovingAverage(&i, current_params.effective_current, arrCurrent_moving);
+          getMovingAverage_s(&i);
+          (i < 9) ? (++i) : (i = 0);
+
+          ISR_state = SPLIT_SAMPLES;
+          // conversion_is_complete = false;
+          HAL_TIM_Base_Start(&htim3);
+          break;
 
         default:
             break;
