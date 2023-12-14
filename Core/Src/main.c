@@ -137,11 +137,6 @@ uint16_t getAverage (uint16_t* samples_buff){
 
 	for (uint16_t i=0; i<VOLTAGE_SAMPLES; i++){
 		sum += samples_buff[i];
-		//if(i==246){
-		//	uint16_t waiting=0;
-		//	//wait
-		//	continue;
-		//}
 	}
 	return (uint16_t)(sum/VOLTAGE_SAMPLES);
 }
