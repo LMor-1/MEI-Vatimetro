@@ -175,6 +175,36 @@ double getRMS(double *samples_buff)
 
     return rms_value;
 }
+                       //indice del arreglo; muestra que se agrega; ubicacion donde se agrega
+double getMovingAverage (uint8_t* n, double* sample_buff, double* arr_average){
+  
+  volatile double tmp_value;
+
+  arr_average[n] = sample_buff;
+
+  for(uint8_t x=0; x<N_AVERAGE; x++) 
+  {
+    tmp_value += arr_average[x];
+  }  
+
+  return (tmp_value/N_AVERAGE);
+}
+
+void getMovingAverage_s (uint8_t* n){
+
+  arrPower_moving[n].active_power = power_data_acquired.active_power;
+  arrPower_moving[n].apparent_power = power_data_acquired.apparent_power;
+  arrPower_moving[n].reactive_power = power_data_acquired.reactive_power;
+  arrPower_moving[n].power_factor = power_data_acquired.power_factor;
+
+  for(uint8_t x=0; x<N_AVERAGE; x++) 
+  {
+    active_value += arrPower_moving[x].active_power;
+    apparent_value += arrPower_moving[x].apparent_power;
+    reactive_value += arrPower_moving[x].reactive_power;
+    factor_value += arrPower_moving[x].power_factor;
+  }  
+}
 
 /* USER CODE END 0 */
 
