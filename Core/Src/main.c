@@ -39,14 +39,14 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-#define SAMPLES_AMOUNT 500
+#define SAMPLES_AMOUNT  500
 #define VOLTAGE_SAMPLES 250
 #define CURRENT_SAMPLES 250
-#define VOLTAGE_COMP 311.11 // 311Vp se traducen en 3Vp
-#define CURRENT_COMP 1
-#define VREF_ADC 3
-#define MAKE_TO_MILI 1000
-#define N_AVERAGE 10
+#define VOLTAGE_COMP    311.11 // 311Vp se traducen en 3Vp
+#define CURRENT_COMP    1
+#define VREF_ADC        3
+#define MAKE_TO_MILI    1000
+#define N_AVERAGE       10
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -97,7 +97,8 @@ typedef enum
   SPLIT_SAMPLES,
   ADECUATE_SAMPLES,
   CALCULATE,
-  MOVING_AVERAGE
+  MOVING_AVERAGE,
+  SHOW
 } StateMachineISR;
 
 typedef struct
@@ -128,15 +129,17 @@ VoltageParams voltage_params = {0};
 CurrentParams current_params = {0};
 PowerParams power_data_acquired = {0};
 
-double arrVoltage_moving[N_AVERAGE] = {0.0};
-double arrCurrent_moving[N_AVERAGE] = {0.0};
-PowerParams arrPower_moving[N_AVERAGE] = {0};
-double voltage_value;
-double current_value;
-double active_value;
-double apparent_value;
-double reactive_value;
-double factor_value;
+static double arrVoltage_moving[N_AVERAGE] = {0.0};
+static double arrCurrent_moving[N_AVERAGE] = {0.0};
+static PowerParams arrPower_moving[N_AVERAGE] = {0};
+static double voltage_value;
+static double current_value;
+static double active_value;
+static double apparent_value;
+static double reactive_value;
+static double factor_value;
+static uint8_t n_values = 1;  //amount of samples
+static uint8_t position_to_insert = 0;
 
 static StateMachineISR ISR_state = SPLIT_SAMPLES;
 // volatile bool conversion_is_complete = false;
@@ -187,19 +190,19 @@ double getRMS(double *samples_buff)
   return rms_value;
 }
 // indice del arreglo; muestra que se agrega; ubicacion donde se agrega
-double getMovingAverage(uint8_t *n, double *sample_buff, double *arr_average)
+double getMovingAverage(uint8_t n, uint8_t amount_of_samples, double sample_buff, double *arr_average)
 {
 
-  volatile double tmp_value;
+  volatile double tmp_value = 0;
 
   arr_average[n] = sample_buff;
 
-  for (uint8_t x = 0; x < N_AVERAGE; x++)
+  for (uint8_t x = 0; x < amount_of_samples; x++)
   {
     tmp_value += arr_average[x];
   }
 
-  return (tmp_value / N_AVERAGE);
+  return (double) (tmp_value / amount_of_samples);
 }
 
 void getMovingAverage_s(uint8_t *n)
@@ -677,18 +680,26 @@ void runStateMachine(bool isReady)
       ISR_state = MOVING_AVERAGE;
 
     case MOVING_AVERAGE:
-      static uint8_t n_values = 0;
 
-      voltage_value = getMovingAverage(&i, voltage_params.effective_voltage, arrVoltage_moving);
-      current_value = getMovingAverage(&i, current_params.effective_current, arrCurrent_moving);
-      getMovingAverage_s(&i);
-      (i < 9) ? (++i) : (i = 0);
+      voltage_value = getMovingAverage(position_to_insert, n_values, voltage_params.effective_voltage, arrVoltage_moving);
+      current_value = getMovingAverage(position_to_insert, n_values, current_params.effective_current, arrCurrent_moving);
+      //TODO
+      getMovingAverage_s(&position_to_insert);
+
+      (position_to_insert < 10) ? (++position_to_insert) : (position_to_insert = 0);
+      (n_values <10) ? (++n_values) : (n_values=10);
+
+      ISR_state = SHOW;
+    
+    case SHOW:
+      /**
+       * TODO: 
+       * show voltage_value, current_value and the other power values
+       * */ 
 
       ISR_state = SPLIT_SAMPLES;
-      // conversion_is_complete = false;
       HAL_TIM_Base_Start(&htim3);
       break;
-
     default:
       break;
     }
