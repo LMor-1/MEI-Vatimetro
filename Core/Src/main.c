@@ -205,21 +205,31 @@ double getMovingAverage(uint8_t n, uint8_t amount_of_samples, double sample_buff
   return (double) (tmp_value / amount_of_samples);
 }
 
-void getMovingAverage_s(uint8_t *n)
+void getMovingAverage_s(uint8_t n, uint8_t amount_of_samples)
 {
+  volatile double tmp_act =0; 
+  volatile double tmp_app =0; 
+  volatile double tmp_rea =0; 
+  volatile double tmp_fdp =0; 
 
-  arrPower_moving[n].active_power = power_data_acquired.active_power;
+  arrPower_moving[n].active_power   = power_data_acquired.active_power;
   arrPower_moving[n].apparent_power = power_data_acquired.apparent_power;
   arrPower_moving[n].reactive_power = power_data_acquired.reactive_power;
-  arrPower_moving[n].power_factor = power_data_acquired.power_factor;
+  arrPower_moving[n].power_factor   = power_data_acquired.power_factor;
 
-  for (uint8_t x = 0; x < N_AVERAGE; x++)
+  for (uint8_t x = 0; x < amount_of_samples; x++)
   {
-    active_value += arrPower_moving[x].active_power;
-    apparent_value += arrPower_moving[x].apparent_power;
-    reactive_value += arrPower_moving[x].reactive_power;
-    factor_value += arrPower_moving[x].power_factor;
+    tmp_act += arrPower_moving[x].active_power;
+    tmp_app += arrPower_moving[x].apparent_power;
+    tmp_rea += arrPower_moving[x].reactive_power;
+    tmp_fdp += arrPower_moving[x].power_factor;
   }
+  active_value  += tmp_act/amount_of_samples;//printf
+  apparent_value+= tmp_app/amount_of_samples;//printf
+  reactive_value+= tmp_rea/amount_of_samples;//printf
+  factor_value  += tmp_fdp/amount_of_samples;//printf
+
+  return;
 }
 
 /* USER CODE END 0 */
@@ -259,6 +269,13 @@ int main(void)
   /* USER CODE BEGIN 2 */
   HAL_ADC_Start_DMA(&hadc1, (uint32_t *)DMA_samples_buffer, SAMPLES_AMOUNT);
   HAL_TIM_Base_Start_IT(&htim3);
+
+  printf("-----------------------------\r\n");
+  printf("Medidas Electronicas I\r\n");
+  printf("Laboratorio 13\r\n")
+  printf("Alberdi - Morelli - Sepulveda\r\n");
+  printf("-----------------------------\r\n\n");
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -269,66 +286,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    /*
-   if(conversion_is_complete){
-       switch(ISR_state){
-
-           case SPLIT_SAMPLES:
-               for(uint16_t i=0; i<SAMPLES_AMOUNT; i++){
-                   uint16_t k=i/2;
-                   ((i%2)==0)? (voltage_params.voltage_samples[k]=DMA_samples_buffer[i]) : (current_params.current_samples[k]=DMA_samples_buffer[i]);
-               }
-
-               ISR_state = ADECUATE_SAMPLES;
-               break;
-
-           case ADECUATE_SAMPLES:
-               for(uint16_t i=0; i<VOLTAGE_SAMPLES; i++){
-                   voltage_params.adequate_voltage_samples[i]=(voltage_params.voltage_samples[i]-voltage_params.average_val_voltage)*VOLTAGE_COMP;
-                   current_params.adequate_current_samples_mA[i]=(current_params.current_samples[i]-current_params.average_val_current)*CURRENT_COMP;
-               }
-
-               ISR_state = CALCULATE;
-               break;
-
-           case CALCULATE:
-               //S: apparent power
-               //Q: reactive power
-               //P: active power
-               //FDP: arc cosine of P/S
-
-               voltage_params.average_val_voltage = getAverage(voltage_params.voltage_samples);
-               current_params.average_val_current = getAverage(current_params.current_samples);
-
-               for(uint16_t i=0; i<VOLTAGE_SAMPLES; i++)
-                   instant_power[i] = (uint32_t)(voltage_params.adequate_voltage_samples[i]*current_params.adequate_current_samples_mA[i]);
-
-               power_data_acquired.active_power = getAverage_32b(instant_power);	//V*I*cos(phi)
-
-               voltage_params.effective_voltage = getRMS (voltage_params.adequate_voltage_samples);
-               current_params.effective_current_mA = getRMS (current_params.adequate_current_samples_mA);
-               power_data_acquired.apparent_power = current_params.effective_current_mA*voltage_params.effective_voltage;
-
-               power_data_acquired.reactive_power = sqrt(power_data_acquired.apparent_power*power_data_acquired.apparent_power - power_data_acquired.active_power*power_data_acquired.active_power);
-
-               power_data_acquired.power_factor = acosf(power_data_acquired.active_power/power_data_acquired.apparent_power);
-
-               ISR_state = MOVING_AVERAGE;
-               break;
-
-           case MOVING_AVERAGE:
-
-               ISR_state = SPLIT_SAMPLES;
-               conversion_is_complete = false;
-               HAL_TIM_Base_Start(&htim3);
-               break;
-
-           default:
-               break;
-       }
-
-   }
-   */
+    
   }
   /* USER CODE END 3 */
 }
@@ -682,24 +640,31 @@ void runStateMachine(bool isReady)
     case MOVING_AVERAGE:
 
       voltage_value = getMovingAverage(position_to_insert, n_values, voltage_params.effective_voltage, arrVoltage_moving);
-      current_value = getMovingAverage(position_to_insert, n_values, current_params.effective_current, arrCurrent_moving);
-      //TODO
-      getMovingAverage_s(&position_to_insert);
+      current_value = getMovingAverage(position_to_insert, n_values, current_params.effective_current_mA, arrCurrent_moving);
+
+      getMovingAverage_s(position_to_insert, n_values);
 
       (position_to_insert < 10) ? (++position_to_insert) : (position_to_insert = 0);
-      (n_values <10) ? (++n_values) : (n_values=10);
+      (n_values <N_AVERAGE) ? (++n_values) : (n_values=N_AVERAGE);
 
       ISR_state = SHOW;
     
     case SHOW:
       /**
        * TODO: 
-       * show voltage_value, current_value and the other power values
+       * Redirect through USART3
        * */ 
+      printf("Tension efectiva:\t %f [V]\r\n", voltage_value);
+      printf("Corriente efectiva:\t %f [mA]\r\n",current_value);
+      printf("Potencia activa:\t %f [W]\r\n", active_value);
+      printf("Potencia aparente:\t %f [VA]\r\n", apparent_value);
+      printf("Potencia reactiva:\t %f [VAR]\r\n", reactive_value);
+      printf("Factor de potencia:\t %f []\r\n", factor_value);
 
       ISR_state = SPLIT_SAMPLES;
       HAL_TIM_Base_Start(&htim3);
       break;
+
     default:
       break;
     }
