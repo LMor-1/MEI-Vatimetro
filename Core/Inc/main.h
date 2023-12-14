@@ -77,6 +77,9 @@ void Error_Handler(void);
 #define LD2_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
+#define USART_Tx GPIO_PIN_10
+#define USART_Rx GPIO_PIN_11
+#define USART_GPIO_Port GPIOB
 
 /* USER CODE END Private defines */
 
