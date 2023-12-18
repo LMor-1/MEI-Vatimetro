@@ -76,22 +76,22 @@ static double instant_power[VOLTAGE_SAMPLES] = {0.0};
 void runStateMachine(bool isReady);
 
 
-#ifdef __GNUC__
+//#ifdef __GNUC__
 #define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
-#else
-#define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
-#endif
+//#else
+//#define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
+//#endif
 
-//
-//PUTCHAR_PROTOTYPE{
-//  HAL_UART_Transmit(&huart3,(uint8_t *)&ch, 1, HAL_MAX_DELAY);
-//
-//  return ch;
-//}
-int _write(int file, char *ptr, int len) {
-    HAL_UART_Transmit(&huart3, (uint8_t *)ptr, len, 1000);
-    return len;
+
+PUTCHAR_PROTOTYPE{
+  HAL_UART_Transmit(&huart3,(uint8_t *)&ch, 1, HAL_MAX_DELAY);
+
+  return ch;
 }
+//int _write(int file, char *ptr, int len) {
+//    HAL_UART_Transmit(&huart3, (uint8_t *)ptr, len, 1000);
+//    return len;
+//}
 
 typedef enum
 {
@@ -168,7 +168,7 @@ uint16_t getAverage(uint16_t *samples_buff)
 double getAverage_double(double *samples_buff)
 {
 
-  volatile uint32_t sum = 0;
+  volatile double sum = 0;
 
   for (uint32_t i = 0; i < VOLTAGE_SAMPLES; i++)
   {
@@ -251,7 +251,12 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-
+  printf("-----------------------------\r\n");
+  printf("Medidas Electronicas I\r\n");
+  printf("Laboratorio 13\r\n");
+  printf("Alberdi - Morelli - Sepulveda\r\n");
+  printf("-----------------------------\r\n\n");
+  HAL_Delay(2000);
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -271,11 +276,7 @@ int main(void)
   HAL_ADC_Start_DMA(&hadc1, (uint32_t *)DMA_samples_buffer, SAMPLES_AMOUNT);
   HAL_TIM_Base_Start_IT(&htim3);
 
-  printf("-----------------------------\r\n");
-  printf("Medidas Electronicas I\r\n");
-  printf("Laboratorio 13\r\n");
-  printf("Alberdi - Morelli - Sepulveda\r\n");
-  printf("-----------------------------\r\n\n");
+
 
   /* USER CODE END 2 */
 
@@ -629,7 +630,11 @@ void runStateMachine(bool isReady)
       // Q: reactive power
       // P: active power
       // FDP: arc cosine of P/S
-      power_data_acquired.active_power = (getAverage_double(instant_power)) / MAKE_TO_MILI; // V*I*cos(phi)
+
+      volatile double aux_active_power = getAverage_double(instant_power) / MAKE_TO_MILI;
+      volatile double aux_squared_power= pow(aux_active_power, 2);
+
+      power_data_acquired.active_power =  sqrt(aux_squared_power);// V*I*cos(phi)
 
       voltage_params.effective_voltage = getRMS(voltage_params.adequate_voltage_samples);
       current_params.effective_current_mA = (getRMS(current_params.adequate_current_samples_mA));
@@ -658,16 +663,13 @@ void runStateMachine(bool isReady)
       ISR_state = SHOW;
     
     case SHOW:
-      /**
-       * TODO: 
-       * Redirect through USART3
-       * */ 
-      printf("Tension efectiva:\t %f [V]\r\n", voltage_value);
-      printf("Corriente efectiva:\t %f [mA]\r\n",current_value);
-      printf("Potencia activa:\t %f [W]\r\n", active_value);
-      printf("Potencia aparente:\t %f [VA]\r\n", apparent_value);
-      printf("Potencia reactiva:\t %f [VAR]\r\n", reactive_value);
-      printf("Factor de potencia:\t %f []\r\n", factor_value);
+
+      printf("Tension efectiva:\t %.2f [V]\r\n", voltage_value);
+      printf("Corriente efectiva:\t %.2f [mA]\r\n",current_value);
+      printf("Potencia activa:\t %.2f [W]\r\n", active_value);
+      printf("Potencia aparente:\t %.2f [VA]\r\n", apparent_value);
+      printf("Potencia reactiva:\t %.2f [VAR]\r\n", reactive_value);
+      printf("Factor de potencia:\t %.2f []\r\n\n", factor_value);
 
       ISR_state = SPLIT_SAMPLES;
       HAL_TIM_Base_Start(&htim3);
